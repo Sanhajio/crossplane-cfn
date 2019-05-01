@@ -1,0 +1,86 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Crossplane Wordpress deployment non supported resources types, security groups, rds'
+
+Parameters:
+
+  VpcId:
+    Type: String
+    Description: Vpc id where the rds instance would be deployed.
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: SubnetIds where the DBSubnetGroup will be deployed
+
+  ClusterSecurityGroupName:
+    Type: String
+    Description: EC2 instances Security Group Name
+
+  ClusterSecurityGroupId:
+    Type: String
+    Description: EKS EC2 Security Group Id to accept ingress traffic from the Cluster
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Necessary resources forr RDS deployment"
+        Parameters:
+          - VpcId
+          - SubnetIds
+          - ClusterSecurityGroupName
+          - ClusterSecurityGroupId
+
+Resources:
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet Group for Rds instances"
+      SubnetIds: 
+      - !Select [ 0, !Ref SubnetIds]
+      - !Select [ 1, !Ref SubnetIds]
+      - !Select [ 2, !Ref SubnetIds]
+ 
+      Tags:
+      -
+        Key: Name
+        Value: !Sub crossplane-rds-subnet-group
+      -
+        Key: VpcId 
+        Value: !Ref VpcId
+      -
+        Key: cloudformation-stack
+        Value: !Ref AWS::StackId
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS Security Group
+      GroupName: rds-security-group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        CidrIp: 0.0.0.0/0
+      Tags:
+      -
+        Key: Name
+        Value: !Sub crossplane-rds-sg
+      -
+        Key: VpcId 
+        Value: !Ref VpcId
+      -
+        Key: cloudformation-stack
+        Value: !Ref AWS::StackId
+
+Outputs:
+  DBSecurityGroup:
+    Description: 'DB Security Group.'
+    Value: !Ref DBSecurityGroup
+
+  DBSubnetGroup:
+    Description: 'DB Subnet Group.'
+    Value: !Ref DBSubnetGroup

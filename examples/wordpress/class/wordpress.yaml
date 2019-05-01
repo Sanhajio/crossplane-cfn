@@ -1,0 +1,71 @@
+apiVersion: storage.crossplane.io/v1alpha1
+kind: Bucket
+metadata:
+  name: demo-bucket
+spec:
+  name: wordpress-demo-e401ddfa-4729-4b72-bcef-94922203b547
+  region: us-west-2
+  localPermission: Read
+  predefinedACL: private
+---
+apiVersion: storage.crossplane.io/v1alpha1
+kind: MySQLInstance
+metadata:
+  name: mysql-instance
+spec:
+  classReference:
+    name: standard
+    namespace: crossplane-system
+  engineVersion: "5.7"
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      containers:
+      - name: wordpress
+        image: wordpress:4.6.1-apache
+        env:
+        - name: WORDPRESS_DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: mysql-instance
+              key: endpoint
+        - name: WORDPRESS_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-instance
+              key: username
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-instance
+              key: password
+        ports:
+        - containerPort: 80
+          name: wordpress
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: wordpress
+    tier: frontend
+  type: LoadBalancer

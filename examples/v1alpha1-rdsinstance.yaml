@@ -1,0 +1,16 @@
+apiVersion: database.aws.crossplane.io/v1alpha1
+kind: RDSInstance
+metadata:
+  name: demo-rds
+spec:
+  class: db.t2.small
+  connectionSecretRef:
+    name: demo-rds-connection
+  engine: mysql
+  masterUsername: masteruser
+  providerRef:
+    name: demo-aws-provider
+  securityGroups: 
+  - %%DB_SECURITY_GROUP%% # sg-0a2c838fe08d06187
+  subnetGroupName: %%DB_SUBNET_GROUP_NAME%% #  crossplane-db-subnet
+  size: 20

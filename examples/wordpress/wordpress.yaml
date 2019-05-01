@@ -1,0 +1,83 @@
+apiVersion: storage.aws.crossplane.io/v1alpha1
+kind: S3Bucket
+metadata:
+  name: demo-bucket
+spec:
+  name: wordpress-demo-e401ddfa-4729-4b72-bcef-94922203b547
+  predefinedACL: private
+  versioning: false
+  region: us-west-2
+  localPermission: ReadWrite
+  providerRef:
+    name: demo-aws-provider
+---
+apiVersion: database.aws.crossplane.io/v1alpha1
+kind: RDSInstance
+metadata:
+  name: demo-rds
+spec:
+  class: db.t2.small
+  connectionSecretRef:
+    name: demo-database-connection
+  engine: mysql
+  masterUsername: masteruser
+  providerRef:
+    name: demo-aws-provider
+  securityGroups:
+  - %%DB_SECURITY_GROUP%% # sg-0a2c838fe08d06187
+#  - vpc-default-sg - default security group for your VPC
+#  - vpc-rds-sg - security group to allow RDS connection
+  subnetGroupName: %%DB_SUBNET_GROUP_NAME%% #  crossplane-db-subnet
+  size: 20
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      containers:
+      - name: wordpress
+        image: wordpress:4.6.1-apache
+        env:
+        - name: WORDPRESS_DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: demo-database-connection
+              key: endpoint
+        - name: WORDPRESS_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: demo-database-connection
+              key: username
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: demo-database-connection
+              key: password
+        ports:
+        - containerPort: 80
+          name: wordpress
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: wordpress
+    tier: frontend
+  type: LoadBalancer
