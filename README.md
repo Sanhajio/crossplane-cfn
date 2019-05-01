@@ -107,3 +107,9 @@ Access wordpress workload endpoint:
 ```
     kubectl -n crossplane-system get services
 ```
+
+# Clean up
+
+Unfortunatly deleting resources with: ` kubectl -n crossplane-system delete -f examples/wordpress/wordpress.yaml ` does not delete all resources and some have to be deleted by hand.
+
+
